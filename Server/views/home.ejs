@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Temp</title>
+  </head>
+  <body>
+    <form action="/search" method="post">
+      <input
+        type="text"
+        name="inputText"
+        id="inputText"
+        placeholder="Search..."
+        required
+      />
+      <div>
+        <button type="submit" name="button" value="arxiv">arXiv</button>
+        <button type="submit" name="button" value="archive">archive</button>
+      </div>
+      <div id="output" name="output"><%- output %></div>
+    </form>
+  </body>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+    }
+    body,
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+    #inputText {
+      padding: 10px;
+    }
+    button {
+      padding: 5px;
+    }
+    #output {
+      white-space: pre-wrap;
+      padding: 10px;
+      width: 350px;
+      overflow-y: scroll;
+      height: 350px;
+      border-radius: 5px;
+      border: 1px solid black;
+    }
+    .item {
+      border: 1px solid black;
+      margin: 5px;
+      padding: 2px;
+    }
+  </style>
+</html>
