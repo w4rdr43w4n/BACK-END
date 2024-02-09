@@ -4,8 +4,10 @@ const app = express()
 
 // Local libs
 
-const arxiv = require('./arxiv')
-const archive = require("./archive")
+const {searchInArxiv} = require('./arxiv')
+const {searchInArchive} = require('./archive')
+const {searchInSemantic} = require('./semantic')
+const {asyncRetryHandler} = require('./dep')
 // Server Configuration
 const PORT = 3000
 app.set('view engine', 'ejs');
@@ -26,24 +28,26 @@ app.post('/search', (req, res) => {
   var outputHTML = ''
   switch (buttonClicked) {
     case 'arxiv':
-        parse_res_arxiv(query).then((sre) => {
+      search(query,'arxiv').then((sre) => {
           res.render('home',{output:sre})
         }).catch((err) => {
           console.log(`Error :${err}`)
         })
             break;
         case 'archive':
-          parse_res_archive(query).then((sre) => {
+          search(query,'archive').then((sre) => {
             res.render('home',{output:sre})
           }).catch((err) => {
             console.log(`Error :${err}`)
           })
             break;
-        case 'button3':
-            outputHTML = '<em>Output for Button 3</em>';
+        case 'semantic':
+          asyncRetryHandler(deliverSemanticResults,query).then((sre) => {
+            res.render('home',{output:sre})
+          })
             break;
         default:
-            outputHTML = '<p>Invalid button click</p>';
+          res.render('home',{output:'<p>Something went wrong...try again later</p>'})
   }
 })
 
@@ -52,8 +56,17 @@ app.listen(PORT, () => {
   console.log(`Server is listening at http://localhost:${PORT}`)
 });
 
-async function parse_res_arxiv(query) {
-  let res = await arxiv.searchInArxiv(`${query}`)
+async function search(query,engine) {
+  switch(engine){
+    case 'arxiv':
+    var res = await searchInArxiv(`${query}`)
+    break;
+    case 'archive':
+    var res = await searchInArchive(`${query}`)
+    break;
+    default:
+    var res = await searchInArxiv(`${query}`)
+  }
   let i = 0;
   var htmlRes = ''
   for (let r of res) {
@@ -62,13 +75,17 @@ async function parse_res_arxiv(query) {
   }
   return htmlRes
 }
-async function parse_res_archive(query) {
-  let res = await archive.searchInArchive(`${query}`)
+async function deliverSemanticResults(query) {
+  let res = await searchInSemantic(query)
   let i = 0;
   var htmlRes = ''
   for (let r of res) {
-    var item = `<div class='item'><h4>Title:${r.title}</h4><h4>Author:${r.author}</h4><h4>Published:${r.publish_year}</h4><h4>PDF:<a href='${r.pdfLink}'>Download</a></h4></div>`
+    var item = `<div class='item'><h4>Title:${r.title}</h4><h4>Author:${r.author}</h4><h4>Published:${r.publish_year}</h4><h4>`
+    item = (r.pdfLink == '')? item + '</div>' :item + `PDF:<a href='${r.pdfLink}'>Download</a></h4></div>`
     htmlRes += item
   }
   return htmlRes
 }
+
+
+
