@@ -30,43 +30,49 @@ function parse_author_name(author_name) {
 function get_pdf_url_from_arxiv(arxivId) {
   return `http://arxiv.org/pdf/${arxivId}.pdf`
 }
-// Function to resolve relative URLs
-function resolveUrl(base, relative) {
-  const url = new URL(relative, base);
-  return url.href;
-}
 
-// Function to scrape the website and retrieve PDF URLs
+
 async function get_pdf_url_from_doi(doi) {
+  const url = `https://doi.org/${doi}`;
   try {
-    const url = `http://dx.doi.org/${doi}`
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: {
+        'Accept': 'text/html',
+      },
+    });
+
     const $ = cheerio.load(response.data);
+    const pdfUrl = $('meta[name="citation_pdf_url"]').attr('content');
 
-    // Replace 'selector' with the appropriate CSS selector for your PDF element
-    const pdfElement = $('a');
-
-    // Retrieve the relative URL
-    for (let link of pdfElement) {
-      const href = link.attribs.href
-      console.log(`link[dep]:${href}`)
-      if (typeof href == null) {
-        console.log(`link[dep] is null`)
-        continue
-      }
-      else {
-        console.log(`link is not null[dep]:${href}`)
-        if (href.includes('.pdf')) {
-          const completePdfUrl = resolveUrl(url, href);
-          return completePdfUrl
-        }
-      }
-
+    if (pdfUrl) {
+      return pdfUrl
+    } else {
+      
+      return null
     }
-    return null
   } catch (error) {
-    console.error('Error[dep]:', error.message);
+    //console.error(`Error fetching data for DOI ${doi}: ${error.message}`);
+    return null
   }
 }
 
-module.exports = { get_pdf_url_from_arxiv, get_pdf_url_from_doi, parse_author_name, parse_year }
+const asyncRetryHandler = async (func,value,maxRetries=30, retryDelay=1000) => {
+  let retries = 0;
+  const retry = async () => {
+    try {
+      const result = await func(value);
+      return result; // Resolve the promise with the result
+    } catch (error) {
+      if (retries < maxRetries) {
+        retries++;
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return retry(); // Retry after the delay
+      } else {
+        throw error; // Reject the promise after maxRetries
+      }
+    }
+  };
+  return retry();
+};
+
+module.exports = { get_pdf_url_from_arxiv, get_pdf_url_from_doi, parse_author_name, parse_year,asyncRetryHandler}
